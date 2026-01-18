@@ -39,7 +39,7 @@ def get_sha1_from_vt(md5_hash):
 
 # --- Навігація ---
 with st.sidebar:
-    st.title("🛡️ Vision One")
+    st.title("🛡️ SOC tools")
     choice = st.radio("Оберіть інструмент:", ["Hash Analysis", "IP Security Module"])
     st.divider()
     if not VT_API_KEY or not IPQS_KEY:
