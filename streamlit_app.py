@@ -28,6 +28,7 @@ def extract_hashes(text):
     # except: return None
 
 def check_ip_quality(ip):
+    st.write(f"Довжина ключа: {len(IPQS_KEY)} символів") # Ключ IPQS зазвичай має 32 символи
     st.toast(f"Виконую запит для IP: {ip}") # Це виведе маленьке сповіщення в кутку сайту
     # Очищуємо IP від зайвих пробілів
     ip = ip.strip()
@@ -128,46 +129,62 @@ elif choice == "IP Security Module":
 
     if st.button("Перевірити репутацію") and ip_input:
         if not IPQS_KEY:
-            st.error("Ключ IPQualityScore не налаштовано!")
+            st.error("Ключ IPQualityScore не налаштовано у Secrets!")
         else:
             with st.spinner('Запит до IPQualityScore...'):
-                data = check_ip_quality(ip_input)
+                data = check_ip_quality(ip_input.strip())
+                
                 if data and data.get('success'):
+                    # --- 1. Метрики ризику ---
                     score = data.get('fraud_score', 0)
                     m1, m2, m3 = st.columns(3)
                     m1.metric("Fraud Score", f"{score}/100", "High Risk" if score > 75 else "Safe", delta_color="inverse")
                     m2.metric("Bot Status", "🤖 Bot" if data.get('bot_status') else "✅ Clean")
                     m3.metric("Recent Abuse", "🚨 Yes" if data.get('recent_abuse') else "✅ No")
 
+                    # --- 2. Деталі безпеки ---
                     st.subheader("Security Verdicts")
                     c1, c2, c3 = st.columns(3)
                     with c1: st.info(f"VPN: {'🔴 Yes' if data.get('vpn') else '🟢 No'}")
                     with c2: st.info(f"Proxy: {'🔴 Yes' if data.get('proxy') else '🟢 No'}")
                     with c3: st.info(f"Tor: {'🔴 Yes' if data.get('tor') else '🟢 No'}")
 
+                    # --- 3. Інфраструктура (Фікс ArrowTypeError) ---
                     st.subheader("🏢 Infrastructure")
-                    st.table({
+                    
+                    # Примусово перетворюємо всі значення на str, щоб PyArrow не видавав помилку
+                    infra_data = {
                         "Параметр": ["ISP", "Organization", "Location", "ASN"],
-                        "Значення": [data.get('ISP'), data.get('organization'), f"{data.get('city')}, {data.get('country_code')}", data.get('ASN')]
-                    })
+                        "Значення": [
+                            str(data.get('ISP', 'N/A')),
+                            str(data.get('organization', 'N/A')),
+                            f"{data.get('city', 'Unknown')}, {data.get('country_code', 'Unknown')}",
+                            str(data.get('ASN', 'N/A'))
+                        ]
+                    }
+                    st.table(infra_data)
+                    
                     st.divider()
-                    # 3. Генерація шаблону повідомлення
+
+                    # --- 4. Генерація шаблону сповіщення ---
                     st.subheader("Шаблон сповіщення")
                     
                     city = data.get('city', 'Unknown City')
                     country = data.get('country_code', 'Unknown Country')
                     
-                    # Формуємо текст з виділеним місцем під сервіс
                     template = (
                         f"Вітаю!\n\n"
-                        f"З Вашого облікового запису було здійснено вхід з IP-адреси {ip_input} "
+                        f"З Вашого облікового запису було здійснено вхід з IP-адреси {ip_input.strip()} "
                         f"(Локація: {city}, {country}) до сервісу [ВСТАВТЕ НАЗВУ СЕРВІСУ].\n\n"
                     )
                     
-                    # Виводимо в полі для копіювання
                     st.text_area("Скопіюйте та відредагуйте текст:", value=template, height=160)
                     st.caption("Порада: після копіювання замініть текст у квадратних дужках на назву вашого сервісу.")
+                
                 else:
-                    st.error("Помилка API або невірний IP.")
-
-                    
+                    # Допомагає зрозуміти, чому запитів 0 у кабінеті
+                    error_reason = data.get('message') if data else "Сервер не відповів (Timeout або помилка з'єднання)"
+                    st.error(f"Помилка API: {error_reason}")
+                    if data:
+                        st.json(data) # Виведе сиру відповідь для діагностики, якщо вона є
+                        
