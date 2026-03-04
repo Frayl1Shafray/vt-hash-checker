@@ -19,13 +19,40 @@ def extract_hashes(text):
     sha256_list = list(dict.fromkeys(re.findall(sha256_pattern, text)))
     return md5_list, sha256_list
 
+# def check_ip_quality(ip):
+#     url = f"https://www.ipqualityscore.com/api/json/ip/{IPQS_KEY}/{ip}"
+#     params = {'strictness': 0, 'allow_public_access_points': 'true'}
+#     try:
+#         resp = requests.get(url, params=params, timeout=10)
+#         return resp.json() if resp.status_code == 200 else None
+    # except: return None
+
 def check_ip_quality(ip):
+    # Очищуємо IP від зайвих пробілів
+    ip = ip.strip()
+    
+    # Базовий URL без ключа всередині
     url = f"https://www.ipqualityscore.com/api/json/ip/{IPQS_KEY}/{ip}"
-    params = {'strictness': 0, 'allow_public_access_points': 'true'}
+    
+    # Параметри запиту
+    params = {
+        'strictness': 0, 
+        'allow_public_access_points': 'true',
+        'fast': 'true' # Можна додати для швидшої відповіді
+    }
+    
     try:
         resp = requests.get(url, params=params, timeout=10)
-        return resp.json() if resp.status_code == 200 else None
-    except: return None
+        
+        if resp.status_code == 200:
+            return resp.json()
+        else:
+            # Це допоможе вам побачити помилку в консолі, якщо статус не 200
+            print(f"API Error: Status {resp.status_code}")
+            return None
+    except Exception as e:
+        print(f"Connection Error: {e}")
+        return None
 
 def get_sha1_from_vt(md5_hash):
     url = f'https://www.virustotal.com/api/v3/files/{md5_hash}'
@@ -141,3 +168,5 @@ elif choice == "IP Security Module":
                     st.caption("Порада: після копіювання замініть текст у квадратних дужках на назву вашого сервісу.")
                 else:
                     st.error("Помилка API або невірний IP.")
+
+                    
