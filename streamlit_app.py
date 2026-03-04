@@ -28,6 +28,7 @@ def extract_hashes(text):
     # except: return None
 
 def check_ip_quality(ip):
+    st.toast(f"Виконую запит для IP: {ip}") # Це виведе маленьке сповіщення в кутку сайту
     # Очищуємо IP від зайвих пробілів
     ip = ip.strip()
     
